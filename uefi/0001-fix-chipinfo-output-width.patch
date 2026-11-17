@@ -1,0 +1,19 @@
+diff --git a/Silicon/Qualcomm/KonaPkg/Library/AcpiTableUpdateLib/AcpiTableUpdate.c b/Silicon/Qualcomm/KonaPkg/Library/AcpiTableUpdateLib/AcpiTableUpdate.c
+--- a/Silicon/Qualcomm/KonaPkg/Library/AcpiTableUpdateLib/AcpiTableUpdate.c
++++ b/Silicon/Qualcomm/KonaPkg/Library/AcpiTableUpdateLib/AcpiTableUpdate.c
+@@ -62,7 +62,13 @@
+   mChipInfoProtocol->GetChipId       (mChipInfoProtocol, (EFIChipInfoIdType *)&SOID);
+   mChipInfoProtocol->GetChipVersion  (mChipInfoProtocol, &SIDV);
+-  mChipInfoProtocol->GetChipFamily   (mChipInfoProtocol, (EFIChipInfoFamilyType *)&SDFE);
+-  mChipInfoProtocol->GetModemSupport (mChipInfoProtocol, (EFIChipInfoModemType *)&SIDM);
++  // The protocol writes 32-bit values. Passing the 16-bit ACPI fields
++  // directly can overwrite adjacent stack data, including SOID.
++  UINT32 SdfeTmp = 0;
++  UINT32 SidmTmp = 0;
++  mChipInfoProtocol->GetChipFamily   (mChipInfoProtocol, (EFIChipInfoFamilyType *)&SdfeTmp);
++  SDFE = (UINT16)SdfeTmp;
++  mChipInfoProtocol->GetModemSupport (mChipInfoProtocol, (EFIChipInfoModemType *)&SidmTmp);
++  SIDM = (UINT16)SidmTmp;
+   mChipInfoProtocol->GetSerialNumber (mChipInfoProtocol, (EFIChipInfoSerialNumType *)&SOSN1);
+   mChipInfoProtocol->GetQFPROMChipId (mChipInfoProtocol, (EFIChipInfoQFPROMChipIdType *)&SOSN2);
+   mChipInfoProtocol->GetChipIdString (mChipInfoProtocol, SIDS, EFICHIPINFO_MAX_ID_LENGTH);

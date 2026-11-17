@@ -1,0 +1,41 @@
+; nvtbb: Novatek NT36523 (Xiaomi Pad 5 Pro elish), программный SPI. Установлен офлайн через реестр.
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = HIDClass
+ClassGuid   = {745A17A0-74D3-11D0-B6FE-00A0C90F57DA}
+Provider    = %Prov%
+DriverVer   = 10/31/2026,1.0.0.0
+
+[Manufacturer]
+%Prov% = Std,NTarm64
+
+[Std.NTarm64]
+%Desc% = nvtbb, ROOT\NVTBB
+
+[nvtbb]
+CopyFiles = nvtbb.Copy
+
+[nvtbb.Copy]
+nvtbb.sys
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+[nvtbb.HW]
+AddReg = nvtbb.HW.Reg
+
+[nvtbb.HW.Reg]
+HKR,,"UpperFilters",0x00010000,"mshidkmdf"
+
+[nvtbb.Services]
+AddService = nvtbb,0x00000002,nvtbb.Svc
+
+[nvtbb.Svc]
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %12%\nvtbb.sys
+
+[Strings]
+Prov = "elish"
+Desc = "Novatek NT36523 touch (bit-bang SPI)"
