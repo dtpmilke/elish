@@ -1,5 +1,7 @@
 # Elish DSDT and Bluetooth PEP configuration
 
+[На русском](../README.ru.md)
+
 The Xiaomi Pad 5 Pro (elish) port uses a modified Qualcomm 8250_MTP DSDT. To reproduce the DSDT from the port source tree, copy the reference 8250/builtin/DSDT_8250_MTP.aml into a working directory as DSDT.aml. From that directory run:
 
 ```sh

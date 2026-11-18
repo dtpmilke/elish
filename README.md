@@ -1,5 +1,7 @@
 # Xiaomi Pad 5 Pro (elish) fixes
 
+[На русском](README.ru.md)
+
 These source files cover verified pieces of the Windows on ARM port. The Python tools use only the standard library. Supply the original input files from your own copy. The patchers verify their input and output hashes and require a new output path.
 
 The UEFI port builds on [Project Silicium's Mu-Silicium](https://github.com/Project-Silicium/Mu-Silicium). This repository contains elish patches and driver sources. Start with the [build and validation guide](docs/build-and-validation.md). See [contributing](CONTRIBUTING.md) for the UEFI fork and upstream PR workflow.
