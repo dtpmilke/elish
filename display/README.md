@@ -23,6 +23,8 @@ Apply the following parameters to `HKLM\SOFTWARE\QCOM\Drivers\DxKMD`:
 - `DDRHighestBankBit` = `dword:0000000f` (15)
 - `UBWCEnable` = `dword:00000001` (1)
 - `GmemSize` = `dword:00120000` (1179648 bytes / 1.125 MB)
+- `PreventPowerCollapse` = `dword:00000001` (1 — prevents GPU micro-stutters when waking from idle)
+- `ForceActive` = `dword:00000001` (1 — keeps GPU responsiveness smooth)
 
 Set service start to Demand / Hardware start:
 - `HKLM\SYSTEM\CurrentControlSet\Services\QCDX\Start` = `dword:00000003`

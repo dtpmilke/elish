@@ -64,7 +64,7 @@ python display/gen_panel_xml.py /path/to/Panel_K81_42_02_0a_dualdsi_cphy_lcd_vid
 python display/patch_adreno650.py /path/to/stock/qcdxkm8250.sys qcdxkm8250.patched.sys
 ```
 
-После применения патча драйвер подписывается Authenticode и устанавливается в DriverStore. В реестре настраиваются параметры `HKLM\SOFTWARE\QCOM\Drivers\DxKMD` (`DDRHighestBankBit=15`, `UBWCEnable=1`, `GmemSize=0x120000`). Подробнее в [display/README.md](display/README.md).
+После применения патча драйвер подписывается Authenticode и устанавливается в DriverStore. В реестре настраиваются параметры `HKLM\SOFTWARE\QCOM\Drivers\DxKMD` (`DDRHighestBankBit=15`, `UBWCEnable=1`, `GmemSize=0x120000`, `PreventPowerCollapse=1`, `ForceActive=1`). Подробнее в [display/README.md](display/README.md).
 
 
 ## Тачскрин Novatek NT36523
