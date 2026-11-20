@@ -48,13 +48,24 @@ git apply --check /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
 git apply /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
 ```
 
-## Дисплей K81
+## Дисплей K81 и GPU Adreno 650
 
-Генератор переносит тайминги и команды DSI из исходного XML панели и добавляет идентификатор, поля EDID и физические размеры. С этой конфигурацией встроенный экран показал изображение в тесте E1cp. Стабильность GPU ещё исследуется.
+Генератор переносит тайминги и команды DSI из исходного XML панели и добавляет идентификатор, поля EDID и физические размеры:
 
 ```sh
 python display/gen_panel_xml.py /path/to/Panel_K81_42_02_0a_dualdsi_cphy_lcd_vid.xml elish_k81_42_02_0a.xml
 ```
+
+### Патч GPU Adreno 650 (SM8250-AC / LPDDR5)
+
+Оригинальный драйвер Qualcomm `qcdxkm8250.sys` (WDDM 2.7) собран для Adreno 640 и LPDDR4X. Для запуска Adreno 650 с LPDDR5 на Snapdragon 870 скрипт устраняет две аппаратные проблемы: холодный старт GMU/PDC (TCM retention `+0x1e730` и PDC master bit 31) и хеширование каналов памяти LPDDR5 (`DDRHighestBankBit = 15` вместо 16):
+
+```sh
+python display/patch_adreno650.py /path/to/stock/qcdxkm8250.sys qcdxkm8250.patched.sys
+```
+
+После применения патча драйвер подписывается Authenticode и устанавливается в DriverStore. В реестре настраиваются параметры `HKLM\SOFTWARE\QCOM\Drivers\DxKMD` (`DDRHighestBankBit=15`, `UBWCEnable=1`, `GmemSize=0x120000`). Подробнее в [display/README.md](display/README.md).
+
 
 ## Тачскрин Novatek NT36523
 

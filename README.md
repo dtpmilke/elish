@@ -45,6 +45,15 @@ python display/gen_panel_xml.py /path/to/Panel_K81_42_02_0a_dualdsi_cphy_lcd_vid
 | Original XML, with LF line endings | `62aa7bd9b434c7622da7b3bb1709c69c1962a9a3ea026c2fea25602b557f480f` |
 | Generated configuration | `0337bebc6fbf8359181e5b7fc33a4076064105f8d86b532145bd7ab241ee1641` |
 
+### Adreno 650 GPU Patch (SM8250-AC / LPDDR5)
+
+The stock Qualcomm `qcdxkm8250.sys` (WDDM 2.7) driver was built for Adreno 640 and LPDDR4X. To run on Snapdragon 870 with Adreno 650 and LPDDR5 memory, `patch_adreno650.py` fixes the GMU/PDC cold boot hang (TCM retention `+0x1e730` and PDC master bit 31) and LPDDR5 memory channel hashing (`DDRHighestBankBit = 15`):
+
+```sh
+python display/patch_adreno650.py /path/to/stock/qcdxkm8250.sys qcdxkm8250.patched.sys
+```
+See [display/README.md](display/README.md) for full instructions, registry settings, and hardware verification details.
+
 ## Touchscreen
 
 [nvtbb-disp](touch/README.md) drives the Novatek NT36523 touchscreen over GPIO SPI. Touch input was confirmed on the tablet. The build generates its firmware header from the two local Android firmware files.
