@@ -26,7 +26,7 @@ Apply the following parameters to `HKLM\SOFTWARE\QCOM\Drivers\DxKMD`:
 - `UBWCEnable` = `dword:00000001` (1)
 - `GmemSize` = `dword:00120000` (1179648 bytes / 1.125 MB)
 - `DISPLAY\DisableExternal` = `dword:00000004` (4 — disables phantom second display target, stops `0x4fa` modality storm)
-- `GRAPHICS\FlushTLBOnEverySubmit` = `dword:00000001` (1 — prevents stale SMMU TLB entries on same-root submits)
+- `GRAPHICS\GRAPHICS_FREQ_CONTROL\MaxClampPstate` = `dword:00000008` (8 — caps GPU below SM8150 `perf 9 / 0x1A0` HFI-timeout corner)
 
 Apply to `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers`:
 - `TdrLevel` = `dword:00000003` (3 — standard TDR recovery)
@@ -34,6 +34,11 @@ Apply to `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers`:
 
 Set service start to Demand / Hardware start:
 - `HKLM\SYSTEM\CurrentControlSet\Services\QCDX\Start` = `dword:00000003`
+
+Recommended CPU EPSS clocks (`HKLM\SYSTEM\CurrentControlSet\Services\elishepss\Parameters`):
+- `Silver` = `dword:00000010` (16 — 1805 MHz)
+- `Gold` = `dword:00000011` (17 — 2419 MHz)
+- `Prime` = `dword:00000013` (19 — 2842 MHz)
 
 ## Panel Configuration
 Generate the K81 panel XML using `gen_panel_xml.py` to match the 1600x2560 @ 120 Hz internal display.
