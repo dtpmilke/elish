@@ -3,7 +3,7 @@
 patch_adreno650.py - Universal patcher for Qualcomm Adreno 650 (SM8250-AC / LPDDR5)
 Target: Xiaomi Pad 5 Pro (elish) under Windows 11 ARM64
 
-Applies all 11 hardware & stability patches:
+Applies all 15 hardware & stability patches:
 1. Stage 1 (GMU/PDC Cold Boot):
    - GENERAL_7_start: Direct branch to A650 TCM retention path (+0x1e730)
    - GENERAL_7_stop_selector: S/R literal offset +0x1e730
@@ -19,6 +19,8 @@ Applies all 11 hardware & stability patches:
 4. Stage 4 (p2b/p2c — Fix Corrupted/Striped Font Glyphs on Non-Coherent Platform):
    - GdiStaging_NoCached: clear forced Cached flag on GDI STAGING_CPUVISIBLE allocations
    - CreateAllocation_NoCached: skip setting AllocationInfoFlags.Cached for all allocations (UMD Direct2D/DirectWrite + GDI)
+5. Stage 5 (p2d — Match Android KGSL / Linux Mainline A650 UCHE_GMEM_RANGE):
+   - UCHE_GMEM_RANGE_MIN_LO/HI, MAX_LO/HI: NOP 4 stores (not programmed on A650)
 """
 
 import sys
@@ -115,6 +117,38 @@ PATCHES = [
         'old': bytes.fromhex('a8000037'),
         'new': bytes.fromhex('05000014'),
         'desc': 'tbnz w8, #0, #0x26362c -> b #0x26362c (skip AllocationInfoFlags.Cached for all UMD+GDI allocations; fixes Start/Search font stripes)'
+    },
+    {
+        'name': 'UCHE_GMEM_RANGE_MIN_LO_NOP',
+        'rva': 0x2b539c,
+        'file_off': 0x22139c,
+        'old': bytes.fromhex('0b2d38b9'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP str w11, [x8, #0x382c] (A650 does not program UCHE_GMEM_RANGE)'
+    },
+    {
+        'name': 'UCHE_GMEM_RANGE_MIN_HI_NOP',
+        'rva': 0x2b53ac,
+        'file_off': 0x2213ac,
+        'old': bytes.fromhex('0a3138b9'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP str w10, [x8, #0x3830] (A650 does not program UCHE_GMEM_RANGE)'
+    },
+    {
+        'name': 'UCHE_GMEM_RANGE_MAX_LO_NOP',
+        'rva': 0x2b53bc,
+        'file_off': 0x2213bc,
+        'old': bytes.fromhex('2c3538b9'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP str w12, [x9, #0x3834] (A650 does not program UCHE_GMEM_RANGE)'
+    },
+    {
+        'name': 'UCHE_GMEM_RANGE_MAX_HI_NOP',
+        'rva': 0x2b53c4,
+        'file_off': 0x2213c4,
+        'old': bytes.fromhex('283938b9'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP str w8, [x9, #0x3838] (A650 does not program UCHE_GMEM_RANGE)'
     }
 ]
 
