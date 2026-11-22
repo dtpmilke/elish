@@ -3,7 +3,7 @@
 patch_adreno650.py - Universal patcher for Qualcomm Adreno 650 (SM8250-AC / LPDDR5)
 Target: Xiaomi Pad 5 Pro (elish) under Windows 11 ARM64
 
-Applies all 6 hardware patches:
+Applies all 10 hardware & stability patches:
 1. Stage 1 (GMU/PDC Cold Boot):
    - GENERAL_7_start: Direct branch to A650 TCM retention path (+0x1e730)
    - GENERAL_7_stop_selector: S/R literal offset +0x1e730
@@ -12,6 +12,12 @@ Applies all 6 hardware patches:
    - ENABLE_PDC_bit31_str: Direct store to [x8+x10]
 2. Stage 2 (LPDDR5 Channel Hashing / Hang Detect):
    - DDRHighestBankBit: mov w9, #0x400f (highest bank bit = 15 for LPDDR5)
+3. Stage 3 (p2a — Prevent Permanent Black Screen / D+0x1098 Display Deadlock):
+   - MDPSetDisplayPower_NoOff: keep UEFI 7nm C-PHY dual-DSI state intact on power-off
+   - ResetFromTimeout_SkipDispPwr: skip DISPLAY PoFx/GDSC power-cycle on GPU TDR
+   - ResetFromTimeout_SkipDispTeardown: skip display target teardown loop on GPU TDR
+4. Stage 4 (p2b — Fix Corrupted/Striped Font Glyphs on Non-Coherent Platform):
+   - GdiStaging_NoCached: clear forced Cached flag on GDI STAGING_CPUVISIBLE allocations
 """
 
 import sys
@@ -68,6 +74,38 @@ PATCHES = [
         'old': bytes.fromhex('09028852'),
         'new': bytes.fromhex('e9018852'),
         'desc': 'mov w9, #0x4010 -> mov w9, #0x400f (DDRHighestBankBit = 15 for LPDDR5)'
+    },
+    {
+        'name': 'MDPSetDisplayPower_NoOff',
+        'rva': 0x099f60,
+        'file_off': 0x098560,
+        'old': bytes.fromhex('28c12c91'),
+        'new': bytes.fromhex('87000014'),
+        'desc': 'MDPSetDisplayPower(powerOn=0) -> b 0x14009a17c (return 0, preserve UEFI 7nm C-PHY DSI state)'
+    },
+    {
+        'name': 'ResetFromTimeout_SkipDispPwr',
+        'rva': 0x2980c0,
+        'file_off': 0x2040c0,
+        'old': bytes.fromhex('b8010034'),
+        'new': bytes.fromhex('0d000014'),
+        'desc': 'DxgkDdiResetFromTimeout -> b 0x1402980f4 (skip DISPLAY 0x26b5c0 PoFx/GDSC power-cycle)'
+    },
+    {
+        'name': 'ResetFromTimeout_SkipDispTeardown',
+        'rva': 0x297e94,
+        'file_off': 0x203e94,
+        'old': bytes.fromhex('c8010034'),
+        'new': bytes.fromhex('0e000014'),
+        'desc': 'DxgkDdiResetFromTimeout -> b 0x140297ecc (skip 0x2c6198/0x2c64b8 display target teardown)'
+    },
+    {
+        'name': 'GdiStaging_NoCached',
+        'rva': 0x263ef0,
+        'file_off': 0x1cfef0,
+        'old': bytes.fromhex('09011932'),
+        'new': bytes.fromhex('e903082a'),
+        'desc': 'orr w9, w8, #0x80 -> mov w9, w8 (do not force Cached on GDI STAGING_CPUVISIBLE; fixes corrupted fonts)'
     }
 ]
 
