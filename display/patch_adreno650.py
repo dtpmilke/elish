@@ -3,7 +3,7 @@
 patch_adreno650.py - Universal patcher for Qualcomm Adreno 650 (SM8250-AC / LPDDR5)
 Target: Xiaomi Pad 5 Pro (elish) under Windows 11 ARM64
 
-Applies all 10 hardware & stability patches:
+Applies all 11 hardware & stability patches:
 1. Stage 1 (GMU/PDC Cold Boot):
    - GENERAL_7_start: Direct branch to A650 TCM retention path (+0x1e730)
    - GENERAL_7_stop_selector: S/R literal offset +0x1e730
@@ -16,8 +16,9 @@ Applies all 10 hardware & stability patches:
    - MDPSetDisplayPower_NoOff: keep UEFI 7nm C-PHY dual-DSI state intact on power-off
    - ResetFromTimeout_SkipDispPwr: skip DISPLAY PoFx/GDSC power-cycle on GPU TDR
    - ResetFromTimeout_SkipDispTeardown: skip display target teardown loop on GPU TDR
-4. Stage 4 (p2b — Fix Corrupted/Striped Font Glyphs on Non-Coherent Platform):
+4. Stage 4 (p2b/p2c — Fix Corrupted/Striped Font Glyphs on Non-Coherent Platform):
    - GdiStaging_NoCached: clear forced Cached flag on GDI STAGING_CPUVISIBLE allocations
+   - CreateAllocation_NoCached: skip setting AllocationInfoFlags.Cached for all allocations (UMD Direct2D/DirectWrite + GDI)
 """
 
 import sys
@@ -105,7 +106,15 @@ PATCHES = [
         'file_off': 0x1cfef0,
         'old': bytes.fromhex('09011932'),
         'new': bytes.fromhex('e903082a'),
-        'desc': 'orr w9, w8, #0x80 -> mov w9, w8 (do not force Cached on GDI STAGING_CPUVISIBLE; fixes corrupted fonts)'
+        'desc': 'orr w9, w8, #0x80 -> mov w9, w8 (do not force Cached on GDI STAGING_CPUVISIBLE)'
+    },
+    {
+        'name': 'CreateAllocation_NoCached',
+        'rva': 0x263618,
+        'file_off': 0x1cf618,
+        'old': bytes.fromhex('a8000037'),
+        'new': bytes.fromhex('05000014'),
+        'desc': 'tbnz w8, #0, #0x26362c -> b #0x26362c (skip AllocationInfoFlags.Cached for all UMD+GDI allocations; fixes Start/Search font stripes)'
     }
 ]
 

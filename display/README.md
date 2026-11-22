@@ -7,7 +7,7 @@ Without patching, four hardware/platform incompatibilities prevent stable GPU op
 1. **GMU/PDC Cold Boot Hang**: The GPU Microcontroller (GMU) uses different TCM retention registers on Adreno 650 (`+0x1e730`) and requires PDC wake bit 31 (`0x80000001`).
 2. **LPDDR5 Channel Hashing**: Snapdragon 870 with LPDDR5 requires `DDRHighestBankBit = 15` (stock driver hardcodes 16). Incorrect bank bit causes UBWC eviction translation faults in SMMU (UCHE) and ring hangs at fence 16.
 3. **Permanent Black Screen / Display Deadlock (`p2a`)**: Stock `qcdx` v2.4 attempts 10nm D-PHY/PLL v3.0 re-init whenever the display is powered off or torn down during `DxgkDdiResetFromTimeout`, failing with `ERR=328(1)` on DSI1 and deadlocking `D+0x1098` / `win32k`. Preserving the UEFI-adopted 7nm C-PHY dual-DSI state across TDR and display power-off prevents the deadlock.
-4. **Corrupted/Striped Font Glyphs (`p2b`)**: On non-coherent `elish`, unconditionally setting `AllocationInfoFlags.Cached` on GDI `STAGING_CPUVISIBLE` surfaces causes stale CPU-cached font glyphs when GPU reads from DRAM (`RVA 0x263ef0`).
+4. **Corrupted/Striped Font Glyphs (`p2b` / `p2c`)**: On non-coherent `elish`, setting `AllocationInfoFlags.Cached` (`RVA 0x263618` and `0x263ef0`) on CPU-visible GDI and UMD Direct2D/DirectWrite glyph surfaces causes stale CPU-cached stripes in Start Menu, Search bar, and apps. Skipping the `Cached` flag makes all CPU-visible surfaces Write-Combined (WC).
 
 ## How to Patch
 Run the patcher on the stock driver binary:
@@ -26,6 +26,7 @@ Apply the following parameters to `HKLM\SOFTWARE\QCOM\Drivers\DxKMD`:
 - `UBWCEnable` = `dword:00000001` (1)
 - `GmemSize` = `dword:00120000` (1179648 bytes / 1.125 MB)
 - `DISPLAY\DisableExternal` = `dword:00000004` (4 — disables phantom second display target, stops `0x4fa` modality storm)
+- `GRAPHICS\FlushTLBOnEverySubmit` = `dword:00000001` (1 — prevents stale SMMU TLB translation faults / recurring TDRs)
 - `GRAPHICS\GRAPHICS_FREQ_CONTROL\MaxClampPstate` = `dword:00000008` (8 — caps GPU below SM8150 `perf 9 / 0x1A0` HFI-timeout corner)
 
 Apply to `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers`:
