@@ -3,7 +3,7 @@
 patch_adreno650.py - Universal patcher for Qualcomm Adreno 650 (SM8250-AC / LPDDR5)
 Target: Xiaomi Pad 5 Pro (elish) under Windows 11 ARM64
 
-Applies all 15 hardware & stability patches:
+Applies all 24 hardware & stability patches:
 1. Stage 1 (GMU/PDC Cold Boot):
    - GENERAL_7_start: Direct branch to A650 TCM retention path (+0x1e730)
    - GENERAL_7_stop_selector: S/R literal offset +0x1e730
@@ -19,8 +19,11 @@ Applies all 15 hardware & stability patches:
 4. Stage 4 (p2b/p2c — Fix Corrupted/Striped Font Glyphs on Non-Coherent Platform):
    - GdiStaging_NoCached: clear forced Cached flag on GDI STAGING_CPUVISIBLE allocations
    - CreateAllocation_NoCached: skip setting AllocationInfoFlags.Cached for all allocations (UMD Direct2D/DirectWrite + GDI)
-5. Stage 5 (p2d — Match Android KGSL / Linux Mainline A650 UCHE_GMEM_RANGE):
+5. Stage 5 (p2d/p2e — Match Android KGSL / Linux Mainline A650 hw_init):
    - UCHE_GMEM_RANGE_MIN_LO/HI, MAX_LO/HI: NOP 4 stores (not programmed on A650)
+   - GBIF_QSB_SIDE0..3: 0x50620 -> 0x71620, RBBM_GBIF_CLIENT_QOS_CNTL: 0 -> 3, drop 0x5ff
+   - PC_DBG_ECO_CNTL (0x9e00): 0x800200 -> 0x300200
+   - NOP A660/A690-only 0x9b2 and UCHE_CMDQ_CONFIG (0x2b51d4, 0x2b51dc)
 """
 
 import sys
@@ -149,6 +152,78 @@ PATCHES = [
         'old': bytes.fromhex('283938b9'),
         'new': bytes.fromhex('1f2003d5'),
         'desc': 'NOP str w8, [x9, #0x3838] (A650 does not program UCHE_GMEM_RANGE)'
+    },
+    {
+        'name': 'GBIF_QSB_SIDE0',
+        'rva': 0x14d584,
+        'file_off': 0x14b984,
+        'old': bytes.fromhex('20060500'),
+        'new': bytes.fromhex('20160700'),
+        'desc': 'GBIF_QSB_SIDE0: 0x50620 -> 0x71620 (KGSL A650)'
+    },
+    {
+        'name': 'GBIF_QSB_SIDE1',
+        'rva': 0x14d58c,
+        'file_off': 0x14b98c,
+        'old': bytes.fromhex('20060500'),
+        'new': bytes.fromhex('20160700'),
+        'desc': 'GBIF_QSB_SIDE1: 0x50620 -> 0x71620 (KGSL A650)'
+    },
+    {
+        'name': 'GBIF_QSB_SIDE2',
+        'rva': 0x14d594,
+        'file_off': 0x14b994,
+        'old': bytes.fromhex('20060500'),
+        'new': bytes.fromhex('20160700'),
+        'desc': 'GBIF_QSB_SIDE2: 0x50620 -> 0x71620 (KGSL A650)'
+    },
+    {
+        'name': 'GBIF_QSB_SIDE3',
+        'rva': 0x14d59c,
+        'file_off': 0x14b99c,
+        'old': bytes.fromhex('20060500'),
+        'new': bytes.fromhex('20160700'),
+        'desc': 'GBIF_QSB_SIDE3: 0x50620 -> 0x71620 (KGSL A650)'
+    },
+    {
+        'name': 'RBBM_GBIF_CLIENT_QOS_CNTL',
+        'rva': 0x14d5a4,
+        'file_off': 0x14b9a4,
+        'old': bytes.fromhex('00000000'),
+        'new': bytes.fromhex('03000000'),
+        'desc': 'RBBM_GBIF_CLIENT_QOS_CNTL: 0 -> 3 (KGSL A650)'
+    },
+    {
+        'name': 'GBIF_TABLE_TERMINATE',
+        'rva': 0x14d5a8,
+        'file_off': 0x14b9a8,
+        'old': bytes.fromhex('ff050000'),
+        'new': bytes.fromhex('00000000'),
+        'desc': 'Drop A690-only 0x5ff entry (terminate GBIF table)'
+    },
+    {
+        'name': 'PC_DBG_ECO_CNTL',
+        'rva': 0x14d5ec,
+        'file_off': 0x14b9ec,
+        'old': bytes.fromhex('00028000'),
+        'new': bytes.fromhex('00023000'),
+        'desc': 'PC_DBG_ECO_CNTL (0x9e00): 0x800200 -> 0x300200 (KGSL A650)'
+    },
+    {
+        'name': 'A690_ONLY_0x9B2_NOP',
+        'rva': 0x2b51d4,
+        'file_off': 0x2211d4,
+        'old': bytes.fromhex('4ec926b9'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP str w14, [x10, #0x26c8] (A690-only 0x9b2)'
+    },
+    {
+        'name': 'A660_ONLY_UCHE_CMDQ_NOP',
+        'rva': 0x2b51dc,
+        'file_off': 0x2211dc,
+        'old': bytes.fromhex('6cf138b9'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP str w12, [x11, #0x38f0] (A660/A690-only UCHE_CMDQ_CONFIG)'
     }
 ]
 
