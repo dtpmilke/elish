@@ -26,7 +26,8 @@ Apply the following parameters to `HKLM\SOFTWARE\QCOM\Drivers\DxKMD`:
 - `UBWCEnable` = `dword:00000001` (1)
 - `GmemSize` = `dword:00120000` (1179648 bytes / 1.125 MB)
 - `DISPLAY\DisableExternal` = `dword:00000004` (4 — disables phantom second display target, stops `0x4fa` modality storm)
-- `GRAPHICS\FlushTLBOnEverySubmit` = `dword:00000001` (1 — prevents stale SMMU TLB translation faults / recurring TDRs)
+- `GRAPHICS\EnableSystemCache` = `dword:00000001` (1)
+- `GRAPHICS\EnableSysCacheForGpuhtw` = `dword:00000001` (1)
 - `GRAPHICS\GRAPHICS_FREQ_CONTROL\MaxClampPstate` = `dword:00000008` (8 — caps GPU below SM8150 `perf 9 / 0x1A0` HFI-timeout corner)
 
 Apply to `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers`:

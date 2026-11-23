@@ -1,0 +1,44 @@
+; elishtsens: температура TSENS (только чтение) на Xiaomi Pad 5 Pro (elish). WDM, ROOT\ELISHTSENS, demand-start.
+; Подпись/каталог — координатор; без подписанного каталога ставить elishtsens_system.cmd (через реестр, см. INSTALL.md).
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider    = %Prov%
+DriverVer   = 11/05/2026,1.0.0.0
+CatalogFile = elishtsens.cat
+PnpLockDown = 1
+
+[Manufacturer]
+%Prov% = Std,NTarm64
+
+[Std.NTarm64]
+%Desc% = elishtsens, ROOT\ELISHTSENS
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %Desc%
+
+[SourceDisksFiles]
+elishtsens.sys = 1
+
+[elishtsens.NT]
+CopyFiles = elishtsens.Copy
+
+[elishtsens.Copy]
+elishtsens.sys
+
+[elishtsens.NT.Services]
+AddService = elishtsens,0x00000002,elishtsens.Svc
+
+[elishtsens.Svc]
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %13%\elishtsens.sys
+
+[Strings]
+Prov = "elish"
+Desc = "elish TSENS temperature (read-only)"
