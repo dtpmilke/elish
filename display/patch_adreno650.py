@@ -224,6 +224,38 @@ PATCHES = [
         'old': bytes.fromhex('6cf138b9'),
         'new': bytes.fromhex('1f2003d5'),
         'desc': 'NOP str w12, [x11, #0x38f0] (A660/A690-only UCHE_CMDQ_CONFIG)'
+    },
+    {
+        'name': 'BacklightNotify_SkipBit23',
+        'rva': 0x0e2a50,
+        'file_off': 0x0e1050,
+        'old': bytes.fromhex('c90ab836'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP tbz w9, #0x17 in backlight notify path (allow QCDXDL_BACKLIGHT_CHANGE)'
+    },
+    {
+        'name': 'GetBrightness3_CopyTarget',
+        'rva': 0x2bf6c4,
+        'file_off': 0x22b6c4,
+        'old': bytes.fromhex('888947f9'),
+        'new': bytes.fromhex('ca0200b9'),
+        'desc': 'str w10, [x22] (GetBrightness3 returns Current = Target)'
+    },
+    {
+        'name': 'GetBrightness3_StatusOk',
+        'rva': 0x2bf6c8,
+        'file_off': 0x22b6c8,
+        'old': bytes.fromhex('e9220d9b'),
+        'new': bytes.fromhex('13008052'),
+        'desc': 'mov w19, #0 (GetBrightness3 returns STATUS_SUCCESS)'
+    },
+    {
+        'name': 'GetBrightness3_RetBranch',
+        'rva': 0x2bf6cc,
+        'file_off': 0x22b6cc,
+        'old': bytes.fromhex('348141f9'),
+        'new': bytes.fromhex('25000014'),
+        'desc': 'b #0x94 to epilogue (skip failing backend +0x100 read)'
     }
 ]
 
