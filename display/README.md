@@ -8,6 +8,7 @@ Without patching, four hardware/platform incompatibilities prevent stable GPU op
 2. **LPDDR5 Channel Hashing**: Snapdragon 870 with LPDDR5 requires `DDRHighestBankBit = 15` (stock driver hardcodes 16). Incorrect bank bit causes UBWC eviction translation faults in SMMU (UCHE) and ring hangs at fence 16.
 3. **Permanent Black Screen / Display Deadlock (`p2a`)**: Stock `qcdx` v2.4 attempts 10nm D-PHY/PLL v3.0 re-init whenever the display is powered off or torn down during `DxgkDdiResetFromTimeout`, failing with `ERR=328(1)` on DSI1 and deadlocking `D+0x1098` / `win32k`. Preserving the UEFI-adopted 7nm C-PHY dual-DSI state across TDR and display power-off prevents the deadlock.
 4. **Corrupted/Striped Font Glyphs (`p2b` / `p2c`)**: On non-coherent `elish`, setting `AllocationInfoFlags.Cached` (`RVA 0x263618` and `0x263ef0`) on CPU-visible GDI and UMD Direct2D/DirectWrite glyph surfaces causes stale CPU-cached stripes in Start Menu, Search bar, and apps. Skipping the `Cached` flag makes all CPU-visible surfaces Write-Combined (WC).
+5. **Display Brightness & Slider Fix (`p2g`)**: Stock `qcdx` attempted an unavailable I2C backend read during `GetBrightness2` / `GetBrightness3`, returning hardware failure status to Windows and causing the brightness slider to bounce back to 0. Returning `STATUS_SUCCESS` with the driver's cached brightness fixes slider stability. Bypassing bit-23 gate enables `QCDXDL_EVT_INIT` and backlight notification paths.
 
 ## How to Patch
 Run the patcher on the stock driver binary:

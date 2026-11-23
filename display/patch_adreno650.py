@@ -24,6 +24,11 @@ Applies all 24 hardware & stability patches:
    - GBIF_QSB_SIDE0..3: 0x50620 -> 0x71620, RBBM_GBIF_CLIENT_QOS_CNTL: 0 -> 3, drop 0x5ff
    - PC_DBG_ECO_CNTL (0x9e00): 0x800200 -> 0x300200
    - NOP A660/A690-only 0x9b2 and UCHE_CMDQ_CONFIG (0x2b51d4, 0x2b51dc)
+6. Stage 6 (p2g — Fix Windows Brightness Slider Bounce & Backlight Notification):
+   - BacklightInit_SkipBit23: NOP bit 23 check in display init to allow QCDXDL_EVT_INIT
+   - BacklightNotify_SkipBit23: NOP bit 23 check in notify path to allow QCDXDL_BACKLIGHT_CHANGE
+   - GetBrightness2_StatusOk / RetBranch: bypass failing I2C backend read and return STATUS_SUCCESS with cached brightness (fixes slider bouncing to 0)
+   - GetBrightness3_CopyTarget / StatusOk / RetBranch: bypass failing I2C backend read for DxgkBrightness3
 """
 
 import sys
@@ -226,12 +231,36 @@ PATCHES = [
         'desc': 'NOP str w12, [x11, #0x38f0] (A660/A690-only UCHE_CMDQ_CONFIG)'
     },
     {
+        'name': 'BacklightInit_SkipBit23',
+        'rva': 0x0b0580,
+        'file_off': 0x0aeb80,
+        'old': bytes.fromhex('6801b836'),
+        'new': bytes.fromhex('1f2003d5'),
+        'desc': 'NOP tbz w8, #0x17 in display init (allow QCDXDL_EVT_INIT to register callback and display)'
+    },
+    {
         'name': 'BacklightNotify_SkipBit23',
         'rva': 0x0e2a50,
         'file_off': 0x0e1050,
         'old': bytes.fromhex('c90ab836'),
         'new': bytes.fromhex('1f2003d5'),
         'desc': 'NOP tbz w9, #0x17 in backlight notify path (allow QCDXDL_BACKLIGHT_CHANGE)'
+    },
+    {
+        'name': 'GetBrightness2_StatusOk',
+        'rva': 0x2bf284,
+        'file_off': 0x22b284,
+        'old': bytes.fromhex('60023fd6'),
+        'new': bytes.fromhex('13008052'),
+        'desc': 'mov w19, #0 (GetBrightness2 returns STATUS_SUCCESS; bypass failing I2C backend read)'
+    },
+    {
+        'name': 'GetBrightness2_RetBranch',
+        'rva': 0x2bf288,
+        'file_off': 0x22b288,
+        'old': bytes.fromhex('f303002a'),
+        'new': bytes.fromhex('0e000014'),
+        'desc': 'b #0x38 to 0x2bf2c0 (read cached brightness from [disp + 0x251]; prevents slider bounce to 0)'
     },
     {
         'name': 'GetBrightness3_CopyTarget',
