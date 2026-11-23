@@ -266,7 +266,7 @@ static VOID Worker(PVOID Ctx)
 {
     OBJECT_ATTRIBUTES Oa; UNICODE_STRING K = RTL_CONSTANT_STRING(USER_KEY);
     HANDLE H = NULL, Ev = NULL; PKEVENT EvObj = NULL; IO_STATUS_BLOCK Iosb;
-    PVOID Wait[4]; NTSTATUS St; ULONG P; LARGE_INTEGER Tmo;
+    PVOID Wait[4]; KWAIT_BLOCK WaitBlocks[4]; NTSTATUS St; ULONG P; LARGE_INTEGER Tmo;
     UNREFERENCED_PARAMETER(Ctx);
     Tmo.QuadPart = -5LL * 1000 * 10000;
     InitializeObjectAttributes(&Oa, &K, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -292,7 +292,7 @@ static VOID Worker(PVOID Ctx)
         St = ZwNotifyChangeKey(H, Ev, NULL, NULL, &Iosb, REG_NOTIFY_CHANGE_LAST_SET, FALSE, NULL, 0, TRUE);
         if (!NT_SUCCESS(St)) { ULog("ZwNotifyChangeKey %08x", St); break; }
         for (;;) {
-            St = KeWaitForMultipleObjects(4, Wait, WaitAny, Executive, KernelMode, FALSE, gQcGot ? NULL : &Tmo, NULL);
+            St = KeWaitForMultipleObjects(4, Wait, WaitAny, Executive, KernelMode, FALSE, gQcGot ? NULL : &Tmo, WaitBlocks);
             if (St == STATUS_WAIT_0) goto out;
             if (St == STATUS_WAIT_1) break;                     /* реестр: перечитать и переармировать */
             if (St == STATUS_TIMEOUT) {
