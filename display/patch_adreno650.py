@@ -3,7 +3,7 @@
 patch_adreno650.py - Universal patcher for Qualcomm Adreno 650 (SM8250-AC / LPDDR5)
 Target: Xiaomi Pad 5 Pro (elish) under Windows 11 ARM64
 
-Applies all 24 hardware & stability patches:
+Applies all 27 hardware & stability patches:
 1. Stage 1 (GMU/PDC Cold Boot):
    - GENERAL_7_start: Direct branch to A650 TCM retention path (+0x1e730)
    - GENERAL_7_stop_selector: S/R literal offset +0x1e730
@@ -24,11 +24,14 @@ Applies all 24 hardware & stability patches:
    - GBIF_QSB_SIDE0..3: 0x50620 -> 0x71620, RBBM_GBIF_CLIENT_QOS_CNTL: 0 -> 3, drop 0x5ff
    - PC_DBG_ECO_CNTL (0x9e00): 0x800200 -> 0x300200
    - NOP A660/A690-only 0x9b2 and UCHE_CMDQ_CONFIG (0x2b51d4, 0x2b51dc)
-6. Stage 6 (p2g — Fix Windows Brightness Slider Bounce & Backlight Notification):
+6. Stage 6 (p2h — Fix Windows Brightness Slider Bounce, Sync & Backlight Reduction):
    - BacklightInit_SkipBit23: NOP bit 23 check in display init to allow QCDXDL_EVT_INIT
    - BacklightNotify_SkipBit23: NOP bit 23 check in notify path to allow QCDXDL_BACKLIGHT_CHANGE
-   - GetBrightness2_StatusOk / RetBranch: bypass failing I2C backend read and return STATUS_SUCCESS with cached brightness (fixes slider bouncing to 0)
-   - GetBrightness3_CopyTarget / StatusOk / RetBranch: bypass failing I2C backend read for DxgkBrightness3
+   - GetBrightness2_StatusOk / RetBranch: bypass failing I2C backend read and return STATUS_SUCCESS with cached brightness
+   - GetBacklightReduction_Ratio: return 100% Backlight ratio instead of zero to prevent Windows dimming
+   - SetBrightness2_StatusOk: return STATUS_SUCCESS instead of failing on absent PMIC I2C backend (fixes slider bounce)
+   - SetBrightness3_StatusOk: return STATUS_SUCCESS instead of failing on absent PMIC I2C backend
+   - GetBrightness3_SyncPercent: return valid millinits synced with percentage (eliminates 0-nits clamp)
 """
 
 import sys
@@ -263,28 +266,36 @@ PATCHES = [
         'desc': 'b #0x38 to 0x2bf2c0 (read cached brightness from [disp + 0x251]; prevents slider bounce to 0)'
     },
     {
-        'name': 'GetBrightness3_CopyTarget',
-        'rva': 0x2bf6c4,
-        'file_off': 0x22b6c4,
-        'old': bytes.fromhex('888947f9'),
-        'new': bytes.fromhex('ca0200b9'),
-        'desc': 'str w10, [x22] (GetBrightness3 returns Current = Target)'
+        'name': 'GetBacklightReduction_Ratio',
+        'rva': 0x2bf2cc,
+        'file_off': 0x22b2cc,
+        'old': bytes.fromhex('89020035bf0600b9'),
+        'new': bytes.fromhex('a90600b913000014'),
+        'desc': 'str w9, [x21, #4]; b #0x4c to 0x2bf31c (return 100% Backlight ratio instead of zero)'
     },
     {
-        'name': 'GetBrightness3_StatusOk',
-        'rva': 0x2bf6c8,
-        'file_off': 0x22b6c8,
-        'old': bytes.fromhex('e9220d9b'),
-        'new': bytes.fromhex('13008052'),
-        'desc': 'mov w19, #0 (GetBrightness3 returns STATUS_SUCCESS)'
+        'name': 'SetBrightness2_StatusOk',
+        'rva': 0x2bf3dc,
+        'file_off': 0x22b3dc,
+        'old': bytes.fromhex('60023fd6f303002a'),
+        'new': bytes.fromhex('1300805210000014'),
+        'desc': 'mov w19, #0; b #0x40 to 0x2bf420 (SetBrightness2 returns STATUS_SUCCESS; fixes slider bounce)'
     },
     {
-        'name': 'GetBrightness3_RetBranch',
-        'rva': 0x2bf6cc,
-        'file_off': 0x22b6cc,
-        'old': bytes.fromhex('348141f9'),
-        'new': bytes.fromhex('25000014'),
-        'desc': 'b #0x94 to epilogue (skip failing backend +0x100 read)'
+        'name': 'SetBrightness3_StatusOk',
+        'rva': 0x2bf5dc,
+        'file_off': 0x22b5dc,
+        'old': bytes.fromhex('60023fd6f303002a'),
+        'new': bytes.fromhex('1300805210000014'),
+        'desc': 'mov w19, #0; b #0x40 to 0x2bf620 (SetBrightness3 returns STATUS_SUCCESS)'
+    },
+    {
+        'name': 'GetBrightness3_SyncPercent',
+        'rva': 0x2bf6bc,
+        'file_off': 0x22b6bc,
+        'old': bytes.fromhex('2a5d42b9aa0200b9888947f9e9220d9b348141f9880240f9138140f948f4fff008c942f9'),
+        'new': bytes.fromhex('2a5d42b98a0000352a4549390b7182524a7d0b1baa0200b9ca0200b91300805221000014'),
+        'desc': 'sync millinits with percentage (ldrb w10, [x9, #0x251]; mul w10, 5000; returns STATUS_SUCCESS)'
     }
 ]
 
@@ -324,11 +335,12 @@ def main():
 
     for p in PATCHES:
         off = p['file_off']
-        actual = data[off:off+4]
+        length = len(p['old'])
+        actual = data[off:off+length]
         if actual != p['old']:
             print(f"Error: Patch '{p['name']}' mismatch at offset 0x{off:x}! Expected {p['old'].hex()}, found {actual.hex()}")
             sys.exit(1)
-        data[off:off+4] = p['new']
+        data[off:off+length] = p['new']
         print(f"  [OK] 0x{p['rva']:06x} (file 0x{off:06x}): {p['name']} -> {p['desc']}")
 
     # Update PE Checksum
