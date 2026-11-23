@@ -8,7 +8,17 @@ Without patching, four hardware/platform incompatibilities prevent stable GPU op
 2. **LPDDR5 Channel Hashing**: Snapdragon 870 with LPDDR5 requires `DDRHighestBankBit = 15` (stock driver hardcodes 16). Incorrect bank bit causes UBWC eviction translation faults in SMMU (UCHE) and ring hangs at fence 16.
 3. **Permanent Black Screen / Display Deadlock (`p2a`)**: Stock `qcdx` v2.4 attempts 10nm D-PHY/PLL v3.0 re-init whenever the display is powered off or torn down during `DxgkDdiResetFromTimeout`, failing with `ERR=328(1)` on DSI1 and deadlocking `D+0x1098` / `win32k`. Preserving the UEFI-adopted 7nm C-PHY dual-DSI state across TDR and display power-off prevents the deadlock.
 4. **Corrupted/Striped Font Glyphs (`p2b` / `p2c`)**: On non-coherent `elish`, setting `AllocationInfoFlags.Cached` (`RVA 0x263618` and `0x263ef0`) on CPU-visible GDI and UMD Direct2D/DirectWrite glyph surfaces causes stale CPU-cached stripes in Start Menu, Search bar, and apps. Skipping the `Cached` flag makes all CPU-visible surfaces Write-Combined (WC).
-5. **Display Brightness, Slider Bounce & Backlight Reduction (`p2h`)**: Stock `qcdx` attempted an unavailable I2C backend write/read during `SetBrightness2`, `SetBrightness3`, and `GetBrightness2`/`GetBrightness3`, returning `STATUS_UNSUCCESSFUL` to Windows on every slider adjustment. This caused Windows 11 to immediately revert the slider ("скачет"). Patch `p2h` returns `STATUS_SUCCESS` on both `SetBrightness2` and `SetBrightness3`, returns 100% Backlight ratio in `GetBacklightReduction` to prevent unwanted dimming, and synchronizes `GetBrightness3` millinits directly with percentage (avoiding 0-nits clamp). Bypassing the bit-23 gate enables `QCDXDL_EVT_INIT` and backlight notification paths.
+5. **Display Brightness, Internal Panel & Slider Sync (`p2j`)**: Stock Qualcomm and ported drivers had two critical flaws breaking Windows 11 brightness control:
+   - **External Monitor Fallback**: In `DxgkDdiQueryChildRelations`, Child 0 (the tablet's internal physical MIPI-DSI panel `JKA8142`) was assigned `D3DKMDT_VOT_HDMI` (code 5) instead of `D3DKMDT_VOT_INTERNAL` (`0x80000000`). This caused Windows 11 to classify the display as an external monitor ("Настройка яркости внешнего монитора") and attempt DDC/CI commands over I2C, snapping the slider back to 0% upon any movement.
+   - **Unavailable I2C Backend / PMIC Check**: In `DxgkDdiQueryInterface`, `QueryInterface 2` gated `DXGK_BRIGHTNESS_INTERFACE_2` behind PMIC WLED bit 0 (`tbnz w9, #0`), returning `STATUS_NOT_SUPPORTED`. Furthermore, `SetBrightness2`, `SetBrightness3`, and `SetBrightnessState2` returned errors on absent PMIC.
+   Patch `p2j` fully resolves brightness control:
+   - Restores `D3DKMDT_VOT_INTERNAL` (`0x80000000`) for Child 0, ensuring Windows 11 recognizes the display as an internal tablet screen ("Изменение яркости встроенного дисплея").
+   - Forces `QueryInterface 2` to always populate and return the `DXGK_BRIGHTNESS_INTERFACE_2` table with `STATUS_SUCCESS`.
+   - Returns `STATUS_SUCCESS` in `SetBrightness2`, `SetBrightness3`, and `SetBrightnessState2`.
+   - Returns 100% Backlight ratio in `GetBacklightReduction` to prevent unwanted dimming.
+   - Synchronizes `GetBrightness3` millinits directly with percentage (avoiding 0-nits clamp).
+   - Bypasses the bit-23 gate in `BacklightInit` and `BacklightNotify` to allow `QCDXDL_EVT_INIT` and backlight notification paths.
+   - Backlight hardware control for Kinetic KTZ8866 is seamlessly driven via `elishbl.sys` and `ElishBrightnessSync`.
 
 ## How to Patch
 Run the patcher on the stock driver binary:

@@ -24,14 +24,18 @@ Applies all 27 hardware & stability patches:
    - GBIF_QSB_SIDE0..3: 0x50620 -> 0x71620, RBBM_GBIF_CLIENT_QOS_CNTL: 0 -> 3, drop 0x5ff
    - PC_DBG_ECO_CNTL (0x9e00): 0x800200 -> 0x300200
    - NOP A660/A690-only 0x9b2 and UCHE_CMDQ_CONFIG (0x2b51d4, 0x2b51dc)
-6. Stage 6 (p2h — Fix Windows Brightness Slider Bounce, Sync & Backlight Reduction):
+6. Stage 6 (p2j — Fix Windows Internal Display Brightness Slider, D3DKMDT_VOT_INTERNAL & Sync):
    - BacklightInit_SkipBit23: NOP bit 23 check in display init to allow QCDXDL_EVT_INIT
    - BacklightNotify_SkipBit23: NOP bit 23 check in notify path to allow QCDXDL_BACKLIGHT_CHANGE
+   - QueryInterface2_AlwaysSupported: always return DXGK_BRIGHTNESS_INTERFACE_2 table to Dxgkrnl
+   - SetBrightnessState2_StatusOk: return STATUS_SUCCESS instead of failing on absent PMIC
    - GetBrightness2_StatusOk / RetBranch: bypass failing I2C backend read and return STATUS_SUCCESS with cached brightness
    - GetBacklightReduction_Ratio: return 100% Backlight ratio instead of zero to prevent Windows dimming
    - SetBrightness2_StatusOk: return STATUS_SUCCESS instead of failing on absent PMIC I2C backend (fixes slider bounce)
    - SetBrightness3_StatusOk: return STATUS_SUCCESS instead of failing on absent PMIC I2C backend
    - GetBrightness3_SyncPercent: return valid millinits synced with percentage (eliminates 0-nits clamp)
+   - Child0_InternalVideoOutputTech: set D3DKMDT_VOT_INTERNAL (0x80000000) instead of HDMI (5) for Child 0 (internal panel)
+   - Child0_InternalVideoOutputTech_Str: always store D3DKMDT_VOT_INTERNAL for Child 0 (eliminates "external monitor" fallback)
 """
 
 import sys
@@ -250,6 +254,22 @@ PATCHES = [
         'desc': 'NOP tbz w9, #0x17 in backlight notify path (allow QCDXDL_BACKLIGHT_CHANGE)'
     },
     {
+        'name': 'QueryInterface2_AlwaysSupported',
+        'rva': 0x269ab4,
+        'file_off': 0x1d5ab4,
+        'old': bytes.fromhex('29010037'),
+        'new': bytes.fromhex('09000014'),
+        'desc': 'b #0x269ad8 (always return DXGK_BRIGHTNESS_INTERFACE_2 table to Dxgkrnl)'
+    },
+    {
+        'name': 'SetBrightnessState2_StatusOk',
+        'rva': 0x2bf158,
+        'file_off': 0x22b158,
+        'old': bytes.fromhex('60023fd6f303002a'),
+        'new': bytes.fromhex('1300805210000014'),
+        'desc': 'mov w19, #0; b #0x40 to 0x2bf19c (SetBrightnessState2 returns STATUS_SUCCESS)'
+    },
+    {
         'name': 'GetBrightness2_StatusOk',
         'rva': 0x2bf284,
         'file_off': 0x22b284,
@@ -296,6 +316,22 @@ PATCHES = [
         'old': bytes.fromhex('2a5d42b9aa0200b9888947f9e9220d9b348141f9880240f9138140f948f4fff008c942f9'),
         'new': bytes.fromhex('2a5d42b98a0000352a4549390b7182524a7d0b1baa0200b9ca0200b91300805221000014'),
         'desc': 'sync millinits with percentage (ldrb w10, [x9, #0x251]; mul w10, 5000; returns STATUS_SUCCESS)'
+    },
+    {
+        'name': 'Child0_InternalVideoOutputTech_Restore',
+        'rva': 0x295030,
+        'file_off': 0x201030,
+        'old': (bytes.fromhex('880200b9'), bytes.fromhex('c4010314')),
+        'new': bytes.fromhex('880200b9'),
+        'desc': 'str w8, [x20] (restore stock Child 0 descriptor; eliminate s4a detour to HDMI)'
+    },
+    {
+        'name': 'Child0_InternalVideoOutputTech_Str_Restore',
+        'rva': 0x295058,
+        'file_off': 0x201058,
+        'old': (bytes.fromhex('990600b9'), bytes.fromhex('c2010314')),
+        'new': bytes.fromhex('990600b9'),
+        'desc': 'str w25, [x20, #4] (restore stock D3DKMDT_VOT_INTERNAL 0x80000000 for Child 0; eliminate s4a HDMI detour)'
     }
 ]
 
@@ -335,10 +371,12 @@ def main():
 
     for p in PATCHES:
         off = p['file_off']
-        length = len(p['old'])
-        actual = data[off:off+length]
-        if actual != p['old']:
-            print(f"Error: Patch '{p['name']}' mismatch at offset 0x{off:x}! Expected {p['old'].hex()}, found {actual.hex()}")
+        expected_olds = p['old'] if isinstance(p['old'], (tuple, list)) else (p['old'],)
+        length = len(expected_olds[0])
+        actual = bytes(data[off:off+length])
+        if actual not in expected_olds:
+            expected_str = '/'.join(o.hex() for o in expected_olds)
+            print(f"Error: Patch '{p['name']}' mismatch at offset 0x{off:x}! Expected {expected_str}, found {actual.hex()}")
             sys.exit(1)
         data[off:off+length] = p['new']
         print(f"  [OK] 0x{p['rva']:06x} (file 0x{off:06x}): {p['name']} -> {p['desc']}")
