@@ -136,8 +136,8 @@ static BOOLEAN RawSet(ULONG Raw)
     return RegWr(0x04, (UCHAR)(Raw & 7)) && RegWr(0x05, (UCHAR)(Raw >> 3));
 }
 
-/* проценты -> 11 бит: квадратичная кривая (глазу ровнее) */
-static ULONG PctToRaw(ULONG P) { if (P > 100) P = 100; return BRT_MIN + (BRT_MAX - BRT_MIN) * P * P / 10000; }
+/* проценты -> 11 бит: сбалансированная кривая (50% линейная + 50% квадратичная) */
+static ULONG PctToRaw(ULONG P) { if (P > 100) P = 100; return BRT_MIN + (BRT_MAX - BRT_MIN) * (P * 100 + P * P) / 20000; }
 static ULONG RawToPct(ULONG R)
 {
     ULONG P;
