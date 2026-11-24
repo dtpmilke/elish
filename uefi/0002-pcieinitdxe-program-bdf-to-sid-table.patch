@@ -1,0 +1,13 @@
+diff --git a/Platforms/Xiaomi/elishPkg/Drivers/PcieInitDxe/PcieInitDxe.c b/Platforms/Xiaomi/elishPkg/Drivers/PcieInitDxe/PcieInitDxe.c
+--- a/Platforms/Xiaomi/elishPkg/Drivers/PcieInitDxe/PcieInitDxe.c
++++ b/Platforms/Xiaomi/elishPkg/Drivers/PcieInitDxe/PcieInitDxe.c
+@@ -185,6 +185,9 @@
+   S(PARF + 0x174, 1u << 4);
+   C(PARF + 0x020, 1u << 5);
+   S(PARF + 0x1a8, 1u << 31);
++  W(PARF + 0x1ac, 0);
++  for (i = 0; i < 256; i++) W(PARF + 0x2000 + 4 * i, 0);
++  W(PARF + 0x2000 + 4 * 0x15, (0x0100u << 16) | (1u << 8));
+ 
+   S(GCC + 0x6c01c, 1); Ms(1); C(GCC + 0x6c01c, 1); Ms(1);   /* PCIE_0_PHY_BCR */
+   S(PHY + PHY_PCS_POWER_DOWN_CONTROL, 3);

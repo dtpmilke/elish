@@ -33,7 +33,7 @@ python bluetooth/patch_bluetooth.py nvm /path/to/htnv20.bin crnv20.bin
 
 ## Wi-Fi
 
-Патчер принимает оригинальный `qcwlan6800sc81.sys` версии `1.0.1760.20`, проверяет хеши и создаёт отдельный неподписанный файл. Для установки подпишите драйвер в составе соответствующего пакета. На elish подключение работало, иногда требовалась повторная загрузка прошивки.
+Патчер принимает оригинальный `qcwlan6800sc81.sys` версии `1.0.1760.20`, проверяет хеши и создаёт отдельный неподписанный файл. Для установки подпишите драйвер в составе соответствующего пакета. С применением патча `0002-pcieinitdxe-program-bdf-to-sid-table.patch` в UEFI загрузка чипа QCA6390 и подключение к Wi-Fi работают стабильно с первой попытки без повторных инициализаций прошивки.
 
 ```sh
 python wifi/patch_qcwlan.py --orig /path/to/original/qcwlan6800sc81.sys --out qcwlan6800sc81.unsigned.sys
@@ -41,12 +41,23 @@ python wifi/patch_qcwlan.py --orig /path/to/original/qcwlan6800sc81.sys --out qc
 
 ## UEFI
 
-Патч исправляет размер выходных буферов для `GetChipFamily` и `GetModemSupport`. В проверенной сборке Windows прочитала из DSDT значение `SOID = 0x164`. Выполните команды из корня [Mu-Silicium](https://github.com/Project-Silicium/Mu-Silicium). Проверка проводилась на коммите `4bd8ae83bf37de41777f19e0777db70f59383a6d`.
+Патчи применяются из корня репозитория [Mu-Silicium](https://github.com/Project-Silicium/Mu-Silicium) (проверка проводилась на коммите `4bd8ae83bf37de41777f19e0777db70f59383a6d`):
 
-```sh
-git apply --check /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
-git apply /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
-```
+1. **Исправление буферов ChipInfo** (`0001-fix-chipinfo-output-width.patch`):
+   Исправляет размер выходных буферов для `GetChipFamily` и `GetModemSupport`. Предотвращает перезапись соседних данных стека, включая `SOID`. В проверенной сборке Windows прочитала из DSDT значение `SOID = 0x164`.
+
+   ```sh
+   git apply --check /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
+   git apply /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
+   ```
+
+2. **Инициализация таблицы PCIe BDF-to-SID** (`0002-pcieinitdxe-program-bdf-to-sid-table.patch`):
+   Настраивает таблицу отображения BDF-to-SID контроллера PCIe по адресу `PARF + 0x2000` в драйвере `PcieInitDxe`. Привязывает Requestor ID устройства (BDF `01:00.0` = `0x0100` для чипа QCA6390) к Stream ID SMMU (`0x15`). Устраняет сбои трансляции DMA и обеспечивает 100% стабильный холодный старт Wi-Fi с первой попытки (8 из 8 успешных загрузок).
+
+   ```sh
+   git apply --check /path/to/elish/uefi/0002-pcieinitdxe-program-bdf-to-sid-table.patch
+   git apply /path/to/elish/uefi/0002-pcieinitdxe-program-bdf-to-sid-table.patch
+   ```
 
 ## Дисплей K81 и GPU Adreno 650
 

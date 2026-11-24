@@ -17,9 +17,18 @@ git apply --check /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
 git apply /path/to/elish/uefi/0001-fix-chipinfo-output-width.patch
 ```
 
+## UEFI PCIe BDF-to-SID mapping
+
+[The patch](uefi/0002-pcieinitdxe-program-bdf-to-sid-table.patch) initializes the PCIe Root Complex BDF-to-SID table at `PARF + 0x2000` in `PcieInitDxe`. On SM8250, the PCIe controller requires mapping the PCIe Requestor ID (BDF `01:00.0` = `0x0100` for QCA6390) to SMMU Stream ID (`0x15`). Without this table, uninitialized entries cause SMMU translation faults during DMA, resulting in firmware-loading timeouts and retries. With this patch, cold boot Wi-Fi initialization succeeds reliably on the first attempt (8/8 passes, ~87s to network without retries).
+
+```sh
+git apply --check /path/to/elish/uefi/0002-pcieinitdxe-program-bdf-to-sid-table.patch
+git apply /path/to/elish/uefi/0002-pcieinitdxe-program-bdf-to-sid-table.patch
+```
+
 ## Wi-Fi
 
-[The patcher](wifi/patch_qcwlan.py) accepts the original `qcwlan6800sc81.sys` from package version `1.0.1760.20`. It applies the two verified byte edits, removes the PE certificate table, and updates the checksum. The unsigned output matches the known reference byte for byte. Wi-Fi worked on the test tablet, with occasional firmware-loading retries.
+[The patcher](wifi/patch_qcwlan.py) accepts the original `qcwlan6800sc81.sys` from package version `1.0.1760.20`. It applies the two verified byte edits, removes the PE certificate table, and updates the checksum. The unsigned output matches the known reference byte for byte. With the `0002-pcieinitdxe-program-bdf-to-sid-table.patch` UEFI fix applied, Wi-Fi initializes cleanly on the first attempt without firmware-loading retries.
 
 ```sh
 python wifi/patch_qcwlan.py --orig /path/to/original/qcwlan6800sc81.sys --out qcwlan6800sc81.unsigned.sys
